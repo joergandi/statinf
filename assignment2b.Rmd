@@ -1,0 +1,111 @@
+---
+title: "Analysis of the ToothGrowth Dataset"
+author: "joergandi"
+date: "July 25 2015"
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
+---
+
+## Overview
+The ToothGrowth dataset is a built-in R dataset. It contains data on the length of odontoblasts (teeth) in each of 10 guinea pigs at each of three dose levels of Vitamin C (0.5, 1, and 2 mg) with each of two delivery methods (orange juice or ascorbic acid). The objective of this analysis is to investigate the effect of different dosage and different delivery methods on the tooth length.
+
+_Note: We chose to interleave text, code and figures into a total of 6 pages, instead of using max.3 pages of text with max.3 additional pages of appendix for figures and code._
+
+## Exploratory Analysis
+
+We load the built-in dataset and show basic statistics (mean, quartiles, 95% confidence intervals) for tooth length over delivery method or dosage.
+
+```{r explor, echo=TRUE, fig.height=4, fig.width=10, tidy=FALSE}
+data(ToothGrowth)
+par(mfrow = c(1, 2)) 
+boxplot(ToothGrowth$len ~ ToothGrowth$supp,
+        xlab="delivery methods",
+        ylab="tooth length",
+        main="Tooth length vs\n delivery method")
+boxplot(ToothGrowth$len ~ ToothGrowth$dose,
+        xlab="dosage",
+        ylab="tooth length",
+        main="Tooth length vs dosage")
+```
+
+Since the delivery method seems to impact the tooth length, we show the dosage influence separately for each delivery method. 
+
+```{r explor2, echo=TRUE, fig.height=4, fig.width=10, tidy=FALSE}
+t=split(ToothGrowth,ToothGrowth$supp)
+par(mfrow = c(1, 2)) 
+boxplot(t$OJ$len~t$OJ$dose,
+        xlab="dosage",
+        ylab="tooth length",
+        main="Tooth length vs\n dosage for OJ delivery")
+boxplot(t$VC$len~t$VC$dose,
+        xlab="dosage",
+        ylab="tooth length",
+        main="Tooth length vs\n dosage for VC delivery")
+```
+
+## Basic dataset summary
+
+We provide summaries for the overall dataset and basic statistical information for the total set and the subsets wrt delivery method and dosage.
+
+```{r summary, echo=TRUE}
+
+str(ToothGrowth)
+summary(ToothGrowth)
+tapply(ToothGrowth$len, ToothGrowth$supp,summary)
+tapply(ToothGrowth$len, ToothGrowth$dose,summary)
+```
+
+## Analysis of tooth growth wrt delivery method and dosage
+
+### Does tooth growth on average differ significantly between the OJ and the VC delivery methods?
+
+```{r h1, echo=TRUE}
+d1=split(ToothGrowth$len,ToothGrowth$supp)
+t.test(d1$OJ,d1$VC,paired=FALSE,var.equal = FALSE,conf.level=0.95)
+pval = t.test(d1$OJ,d1$VC,paired=FALSE,var.equal = FALSE,conf.level=0.95)$p.value
+```
+
+We cannot exclude that the tooth growth is the same for both delivery methods with a confidence of at least 95% since 0 is in the 95% confidence interval. However, since the p value is `r pval`, we could eg. conclude that the tooth growth is bigger on average for the OJ delivery method with a less strict confidence interval of eg. less than `r (1-pval)*100`% .
+
+### Does larger dosage result in more tooth growth on average, over all delivery methods?
+
+```{r h2, echo=TRUE}
+d2=split(ToothGrowth$len,as.factor(ToothGrowth$dose))
+t.test(d2$"2",d2$"1",paired=FALSE,var.equal = FALSE,conf.level=0.95)
+t.test(d2$"1",d2$"0.5",paired=FALSE,var.equal = FALSE,conf.level=0.95)
+```
+
+We can reject equal means for dosage 2 vs dosage 1 with a confidence interval of 95%. A small p value indicates a high probability that the alternate hypothesis, larger tooth growth with dosage 2 than dosage 1, is true (positive confidence interval boundaries). The same holds for dosage 1 vs dosage 0.5.
+
+### Does tooth growth on average differ significantly for the same delivery method, but different dosage?
+
+```{r h3, echo=TRUE}
+d3=split(ToothGrowth$len,list(ToothGrowth$supp, as.factor(ToothGrowth$dose)))
+t.test(d3$OJ.2,d3$OJ.1,paired=FALSE,var.equal = FALSE,conf.level=0.95)
+pval21OJ = t.test(d3$OJ.2,d3$OJ.1,paired=FALSE,var.equal = FALSE,conf.level=0.95)$p.value
+t.test(d3$OJ.1,d3$OJ.0.5,paired=FALSE,var.equal = FALSE,conf.level=0.95)
+
+t.test(d3$VC.2,d3$VC.1,paired=FALSE,var.equal = FALSE,conf.level=0.95)
+t.test(d3$VC.1,d3$VC.0.5,paired=FALSE,var.equal = FALSE,conf.level=0.95)
+```
+
+The result from the previous analysis over all delivery methods also holds within each delivery method separately. Higher dosage seems to result in increased tooth growth on average. However, there is stronger evidence for this hypothesis for the VC delivery method (smaller p values) than for the OJ delivery method:  a larger p value of `r pval21OJ` for dosage 2 vs dosage 1 means instead that the _null_ hypothesis of _no difference on average between dosage 2 and dosage 1 for OJ delivery_ would be _confirmed_ if we required only a slightly _stricter confidence interval_ for this test, eg. above `r (1-pval21OJ)*100`%).
+
+## Conclusions and assumptions
+
+Based on this dataset, higher dosage of Vitamin C appears to result on average in more tooth growth for both delivery methods. 
+
+For the above tests, we assume that 
+
+- the teeth length per group are approximately normally distributed or that they at least follow an approximately symmetric distribution; 
+
+- test results between groups cannot be paired,
+
+- the variance of each group is not assumed equal,
+
+- a t-test instead of a z-test is used since we have relatively few observations.
+
+
+
